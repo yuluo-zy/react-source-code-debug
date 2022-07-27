@@ -23,6 +23,7 @@ function Component(props, context, updater) {
   this.refs = emptyObject;
   // We initialize the default updater but the real one gets injected by the
   // renderer.
+  // 我们初始化了默认的更新器，但真正的更新器被渲染器注入
   this.updater = updater || ReactNoopUpdateQueue;
 }
 
@@ -59,12 +60,14 @@ Component.prototype.setState = function(partialState, callback) {
     typeof partialState !== 'function' &&
     partialState != null
   ) {
+    // 类型判断
     throw new Error(
       'setState(...): takes an object of state variables to update or a ' +
         'function which returns an object of state variables.',
     );
   }
-
+  // 这里是 update 调度器的更新 在 react-dom 中进行更新
+  // 为啥要传入, 是因为为了区分不同的平台划分
   this.updater.enqueueSetState(this, partialState, callback, 'setState');
 };
 
@@ -83,6 +86,7 @@ Component.prototype.setState = function(partialState, callback) {
  * @protected
  */
 Component.prototype.forceUpdate = function(callback) {
+  // 强制更新  会触发 `componentWillUpdate` 和 `componentDidUpdate`. 生命周期
   this.updater.enqueueForceUpdate(this, callback, 'forceUpdate');
 };
 
@@ -128,6 +132,9 @@ ComponentDummy.prototype = Component.prototype;
 
 /**
  * Convenience component with default shallow equality check for sCU.
+ * 对 sCU 具有默认浅层相等检查的便利组件
+ * 纯组件
+ * 当 props 或 state 发生变化时，PureComponent会对 props 和 state 做一个浅层的比较。
  */
 function PureComponent(props, context, updater) {
   this.props = props;
@@ -136,10 +143,12 @@ function PureComponent(props, context, updater) {
   this.refs = emptyObject;
   this.updater = updater || ReactNoopUpdateQueue;
 }
-
+// 使用 componentDummy 来实现继承 原型链继承
 const pureComponentPrototype = (PureComponent.prototype = new ComponentDummy());
 pureComponentPrototype.constructor = PureComponent;
 // Avoid an extra prototype jump for these methods.
+// 避免这些方法的额外原型跳转。
+// 把 Component 原型上的 属性copy 到对应上面来
 assign(pureComponentPrototype, Component.prototype);
 pureComponentPrototype.isPureReactComponent = true;
 
