@@ -10,6 +10,10 @@ import {REACT_FORWARD_REF_TYPE, REACT_MEMO_TYPE} from 'shared/ReactSymbols';
 export function forwardRef<Props, ElementType: React$ElementType>(
   render: (props: Props, ref: React$Ref<ElementType>) => React$Node,
 ) {
+  // 函数式组件只是将ref传递下去，ref最终只能被挂载到 class组件或者HTML元素上。
+  //  这是因为 ref 不是 prop属性。就像 key 一样，其被 React 进行了特殊处理。
+
+
   if (__DEV__) {
     if (render != null && render.$$typeof === REACT_MEMO_TYPE) {
       console.error(
@@ -43,6 +47,7 @@ export function forwardRef<Props, ElementType: React$ElementType>(
     }
   }
 
+  // 这整个是 type 对应 element
   const elementType = {
     $$typeof: REACT_FORWARD_REF_TYPE,
     render,

@@ -81,6 +81,7 @@ function mapIntoArray(
   nameSoFar: string,
   callback: (?React$Node) => ?ReactNodeList,
 ): number {
+  // 去掉了对象池的抽象
   const type = typeof children;
 
   if (type === 'undefined' || type === 'boolean') {
@@ -109,16 +110,26 @@ function mapIntoArray(
 
   if (invokeCallback) {
     const child = children;
+    /**
+     * 调用回调
+     * function(child) {
+     *     return func.call(context, child, count++);
+     *   });
+     * @type {?ReactNodeList}
+     */
     let mappedChild = callback(child);
     // If it's the only child, treat the name as if it was wrapped in an array
     // so that it's consistent if the number of children grows:
+    // 如果它是唯一的孩子，则将该名称视为包装在一个数组中，以便在孩子的数量增加时保持一致：
     const childKey =
       nameSoFar === '' ? SEPARATOR + getElementKey(child, 0) : nameSoFar;
     if (isArray(mappedChild)) {
+      // 生成 key
       let escapedChildKey = '';
       if (childKey != null) {
         escapedChildKey = escapeUserProvidedKey(childKey) + '/';
       }
+      // 调用自身 然后返回的是 本身的元素节点, 相当于都展开了
       mapIntoArray(mappedChild, array, escapedChildKey, '', c => c);
     } else if (mappedChild != null) {
       if (isValidElement(mappedChild)) {
@@ -130,6 +141,7 @@ function mapIntoArray(
             checkKeyStringCoercion(mappedChild.key);
           }
         }
+        // 重新创建一个 element 元素 便于后续进行值的修改 然后生成新的 key
         mappedChild = cloneAndReplaceKey(
           mappedChild,
           // Keep both the (mapped) and old keys if they differ, just as
@@ -237,16 +249,35 @@ type MapFunc = (child: ?React$Node) => ?ReactNodeList;
  * @param {*} context Context for mapFunction.
  * @return {object} Object containing the ordered map of results.
  */
+
 function mapChildren(
   children: ?ReactNodeList,
   func: MapFunc,
   context: mixed,
 ): ?Array<React$Node> {
+  // 使用实例
+  /**
+   * class IgnoreFirstChild extends React.Component {
+   *   render() {
+   *     const children = this.props.children
+   *     return (
+   *       <div>
+   *         {React.Children.map(children, (child, i) => {
+   *           // Ignore the first child
+   *           if (i < 1) return
+   *           return child
+   *         })}
+   *       </div>
+   *     )
+   *   }
+   * }
+   */
   if (children == null) {
     return children;
   }
   const result = [];
   let count = 0;
+  // 调用传递进来测闭包
   mapIntoArray(children, result, '', '', function(child) {
     return func.call(context, child, count++);
   });

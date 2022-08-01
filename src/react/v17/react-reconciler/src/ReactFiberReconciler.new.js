@@ -253,6 +253,7 @@ export function updateContainer(
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
 ): Lane {
+
   if (__DEV__) {
     onScheduleRoot(container, element);
   }
@@ -295,6 +296,7 @@ export function updateContainer(
     }
   }
 
+  // 应用需要更新标记的地点
   const update = createUpdate(eventTime, lane);
   // Caution: React DevTools currently depends on this property
   // being called "element".
@@ -313,8 +315,9 @@ export function updateContainer(
     }
     update.callback = callback;
   }
-
+// 加入到更新队列中
   enqueueUpdate(current, update);
+  // 开始调度了
   scheduleUpdateOnFiber(current, lane, eventTime);
 
   return lane;

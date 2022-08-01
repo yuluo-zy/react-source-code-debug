@@ -131,7 +131,9 @@ function createRootImpl(
       options.hydrationOptions != null &&
       options.hydrationOptions.mutableSources) ||
     null;
+  // 这里是创建了一个 firber root 节点
   const root = createContainer(container, tag, hydrate, hydrationCallbacks);
+  // 将 容器的 __reactContainer$ + 随机key 添加上属性 root的属性, 推测 root.current 是通过ref 拿到的
   markContainerAsRoot(root.current, container);
   const containerNodeType = container.nodeType;
 
@@ -196,6 +198,8 @@ export function createLegacyRoot(
   container: Container,
   options?: RootOptions,
 ): RootType {
+  // 在 rander 的调用中 只有是否调和 shouldHydrate
+  // export const LegacyRoot = 0;
   return new ReactDOMBlockingRoot(container, LegacyRoot, options);
 }
 

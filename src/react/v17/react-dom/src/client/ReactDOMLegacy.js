@@ -102,6 +102,7 @@ function getReactRootElementInContainer(container: any) {
 }
 
 function shouldHydrateDueToLegacyHeuristic(container) {
+  // 获取 当前容器的 react root 元素
   const rootElement = getReactRootElementInContainer(container);
   return !!(
     rootElement &&
@@ -114,10 +115,15 @@ function legacyCreateRootFromDOMContainer(
   container: Container,
   forceHydrate: boolean,
 ): RootType {
+  // 从 dom 开始创建 root
+
+  // 这里是与 服务端渲染有关的
   const shouldHydrate =
     forceHydrate || shouldHydrateDueToLegacyHeuristic(container);
+
   // First clear any existing content.
   if (!shouldHydrate) {
+    // 这里是不合并, 所以全部删除掉了
     let warned = false;
     let rootSibling;
     while ((rootSibling = container.lastChild)) {
@@ -149,6 +155,8 @@ function legacyCreateRootFromDOMContainer(
     }
   }
 
+  // 创建 旧根
+  // 还是阻塞的注册
   return createLegacyRoot(
     container,
     shouldHydrate
@@ -175,7 +183,9 @@ function warnOnInvalidCallback(callback: mixed, callerName: string): void {
 function legacyRenderSubtreeIntoContainer(
   parentComponent: ?React$Component<any, any>,
   children: ReactNodeList,
+  // 这个是容器
   container: Container,
+  // 调和 是否要复用这些节点, 在有服务端渲染的情况下
   forceHydrate: boolean,
   callback: ?Function,
 ) {
@@ -186,16 +196,22 @@ function legacyRenderSubtreeIntoContainer(
 
   // TODO: Without `any` type, Flow says "Property cannot be accessed on any
   // member of intersection type." Whyyyyyy.
+  // 第一次渲染的时候 没有相关属性
   let root: RootType = (container._reactRootContainer: any);
   let fiberRoot;
   if (!root) {
     // Initial mount
+    //  从 DOM 容器创建根 这里返回了一个 root 变量 上面有属性,
+    // 注意 这里 root 挂在到了 容器的 _reactRootContainer上面了
+
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
     );
     fiberRoot = root._internalRoot;
     if (typeof callback === 'function') {
+      // 封装了一下 这里的 callback 是用户自己传入的
+      // callback: 渲染完成后的回调函数
       const originalCallback = callback;
       callback = function() {
         const instance = getPublicRootInstance(fiberRoot);
@@ -203,10 +219,16 @@ function legacyRenderSubtreeIntoContainer(
       };
     }
     // Initial mount should not be batched.
+    // 这里是批量更新
     unbatchedUpdates(() => {
+      // children 是我们传进去的节点
+      // 当前 节点的 root内部 根 就是容器? fiberRoot
+      // parentComponent 是null
+      // callback 是回调
       updateContainer(children, fiberRoot, parentComponent, callback);
     });
   } else {
+    // 这里就不是初次渲染的了
     fiberRoot = root._internalRoot;
     if (typeof callback === 'function') {
       const originalCallback = callback;
