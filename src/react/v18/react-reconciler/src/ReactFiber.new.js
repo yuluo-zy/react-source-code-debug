@@ -121,21 +121,30 @@ function FiberNode(
   key: null | string,
   mode: TypeOfMode,
 ) {
-  // Instance
+  // Instance 作为静态数据结构的属性
+  // Fiber对应组件的类型 Function/Class/Host...
   this.tag = tag;
+  // key属性
   this.key = key;
+  // 大部分情况同type，某些情况不同，比如FunctionComponent使用React.memo包裹
   this.elementType = null;
+  // 对于 FunctionComponent，指函数本身，对于ClassComponent，指class，对于HostComponent，指DOM节点tagName
   this.type = null;
+  // Fiber对应的真实DOM节点
   this.stateNode = null;
 
-  // Fiber
+  // Fiber 用于连接其他Fiber节点形成Fiber树
+  // 指向父级Fiber节点
   this.return = null;
+  // 指向子Fiber节点
   this.child = null;
+  // 指向右边第一个兄弟Fiber节点
   this.sibling = null;
   this.index = 0;
 
   this.ref = null;
-
+// 作为动态的工作单元的属性
+  // 保存本次更新造成的状态改变相关信息
   this.pendingProps = pendingProps;
   this.memoizedProps = null;
   this.updateQueue = null;
@@ -144,14 +153,18 @@ function FiberNode(
 
   this.mode = mode;
 
-  // Effects
+  // Effects 保存本次更新会造成的DOM操作 可以先不用看
   this.flags = NoFlags;
   this.subtreeFlags = NoFlags;
   this.deletions = null;
 
+  //  调度优先级相关
   this.lanes = NoLanes;
   this.childLanes = NoLanes;
-
+  // 指向该fiber在另一次更新时对应的fiber
+  // current Fiber树中的Fiber节点被称为current fiber，
+  // workInProgress Fiber树中的Fiber节点被称为workInProgress fiber，
+  // 他们通过alternate属性连接。
   this.alternate = null;
 
   if (enableProfilerTimer) {

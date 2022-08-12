@@ -1883,19 +1883,26 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
 /** @noinline */
 function workLoopConcurrent() {
   // Perform work until Scheduler asks us to yield
+  // 。如果当前浏览器帧没有剩余时间，shouldYield会中止循环，直到浏览器有空闲时间后再继续遍历。
   while (workInProgress !== null && !shouldYield()) {
+    // performUnitOfWork方法会创建下一个Fiber节点并赋值给workInProgress，并将workInProgress与已创建的Fiber节点连接起来构成Fiber树。
     performUnitOfWork(workInProgress);
   }
 }
 
 function performUnitOfWork(unitOfWork: Fiber): void {
+
+  // 这里的 unitOfWork 就是 workInProgress
   // The current, flushed, state of this fiber is the alternate. Ideally
   // nothing should rely on this, but relying on it here means that we don't
   // need an additional field on the work in progress.
-  const current = unitOfWork.alternate;
+  // performUnitOfWork方法会创建下一个Fiber节点并赋值给workInProgress，
+  // 并将workInProgress与已创建的Fiber节点连接起来构成Fiber树。
+  const current = unitOfWork.alternate; // 当前节点
   setCurrentDebugFiberInDEV(unitOfWork);
 
   let next;
+  // begininWork 就是 该方法会根据传入的Fiber节点创建子Fiber节点，并将这两个Fiber节点连接起来。
   if (enableProfilerTimer && (unitOfWork.mode & ProfileMode) !== NoMode) {
     startProfilerTimer(unitOfWork);
     next = beginWork(current, unitOfWork, subtreeRenderLanes);
@@ -1906,6 +1913,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
 
   resetCurrentDebugFiberInDEV();
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
+  // 当某个Fiber节点执行完completeWork，如果其存在兄弟Fiber节点（即fiber.sibling !== null），会进入其兄弟Fiber的“递”阶段。
   if (next === null) {
     // If this doesn't spawn new work, complete the current work.
     completeUnitOfWork(unitOfWork);

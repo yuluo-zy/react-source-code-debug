@@ -34,11 +34,11 @@ import {
   getPublicRootInstance,
   findHostInstance,
   findHostInstanceWithWarning,
-} from 'react-reconciler/src/ReactFiberReconciler';
-import {LegacyRoot} from 'react-reconciler/src/ReactRootTags';
-import getComponentNameFromType from 'shared/getComponentNameFromType';
-import ReactSharedInternals from 'shared/ReactSharedInternals';
-import {has as hasInstance} from 'shared/ReactInstanceMap';
+} from '../../../react-reconciler/src/ReactFiberReconciler';
+import {LegacyRoot} from '../../../react-reconciler/src/ReactRootTags';
+import getComponentNameFromType from '../../../shared/getComponentNameFromType';
+import ReactSharedInternals from '../../../shared/ReactSharedInternals';
+import {has as hasInstance} from '../../../shared/ReactInstanceMap';
 
 const ReactCurrentOwner = ReactSharedInternals.ReactCurrentOwner;
 
@@ -148,6 +148,7 @@ function legacyCreateRootFromDOMContainer(
     return root;
   } else {
     // First clear any existing content.
+    // 这里是不合并, 所以全部删除掉了
     let rootSibling;
     while ((rootSibling = container.lastChild)) {
       container.removeChild(rootSibling);
@@ -160,7 +161,7 @@ function legacyCreateRootFromDOMContainer(
         originalCallback.call(instance);
       };
     }
-
+    // 并发创建根节点
     const root = createContainer(
       container,
       LegacyRoot,
@@ -203,7 +204,9 @@ function warnOnInvalidCallback(callback: mixed, callerName: string): void {
 function legacyRenderSubtreeIntoContainer(
   parentComponent: ?React$Component<any, any>,
   children: ReactNodeList,
+  // 这个是容器
   container: Container,
+  // 调和 是否要复用这些节点, 在有服务端渲染的情况下
   forceHydrate: boolean,
   callback: ?Function,
 ) {
@@ -211,11 +214,16 @@ function legacyRenderSubtreeIntoContainer(
     topLevelUpdateWarnings(container);
     warnOnInvalidCallback(callback === undefined ? null : callback, 'render');
   }
-
+  // 第一次渲染的时候 没有相关属性 所以叫 maybeRoot
   const maybeRoot = container._reactRootContainer;
   let root: FiberRoot;
+  // 首次执行ReactDOM.render会创建fiberRootNode（源码中叫fiberRoot）和
+  // rootFiber。
+  // 其中fiberRootNode是整个应用的根节点，rootFiber是<App/>所在组件树的根节点。
   if (!maybeRoot) {
     // Initial mount
+    //  从 DOM 容器创建根 这里返回了一个 root 变量 上面有属性,
+    // 注意 这里 root 挂在到了 容器的 _reactRootContainer上面了
     root = legacyCreateRootFromDOMContainer(
       container,
       children,
@@ -224,10 +232,12 @@ function legacyRenderSubtreeIntoContainer(
       forceHydrate,
     );
   } else {
+    // 这里说明 已经不是初次渲染了
     root = maybeRoot;
     if (typeof callback === 'function') {
       const originalCallback = callback;
       callback = function() {
+        // 对函数进行包装一下, 然后执行, 相当于 callback 在对应的实例对象上进行缓冲
         const instance = getPublicRootInstance(root);
         originalCallback.call(instance);
       };

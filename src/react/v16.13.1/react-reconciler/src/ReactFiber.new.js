@@ -119,7 +119,7 @@ function FiberNode(
   key: null | string,
   mode: TypeOfMode,
 ) {
-  // Instance
+  // Instance 作为静态数据结构的属性
   this.tag = tag;
   this.key = key;
   this.elementType = null;
