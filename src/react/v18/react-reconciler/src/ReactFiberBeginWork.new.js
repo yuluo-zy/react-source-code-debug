@@ -3649,10 +3649,11 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
   return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
 }
 
+// beginWork的工作是传入当前Fiber节点，创建子Fiber节点
 function beginWork(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes,
+  current: Fiber | null, // 当前组件对应的Fiber节点在上一次更新时的Fiber节点，即workInProgress.alternate
+  workInProgress: Fiber, // 当前组件对应的Fiber节点
+  renderLanes: Lanes, // 优先级相关
 ): Fiber | null {
   if (__DEV__) {
     if (workInProgress._debugNeedsRemount && current !== null) {
@@ -3672,9 +3673,16 @@ function beginWork(
     }
   }
 
+  // 除rootFiber以外， 组件mount时，由于是首次渲染，
+  // 是不存在当前组件对应的Fiber节点在上一次更新时的Fiber节点，即mount时current === null
   if (current !== null) {
+
+    // update时：如果current存在，在满足一定条件时可以复用current节点，
+    // 这样就能克隆current.child作为workInProgress.child，而不需要新建workInProgress.child。
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
+
+    // didReceiveUpdate === false（即可以直接复用前一次更新的子Fiber，不需要新建子Fiber）
 
     if (
       oldProps !== newProps ||
@@ -3731,6 +3739,9 @@ function beginWork(
       //
       // We only use this for id generation during hydration, which is why the
       // logic is located in this special branch.
+      //检查此孩子是否属于其父母中的多个孩子的列表。在真正的多线程实现中，
+      // 我们将在并行线程上渲染子节点。这将代表此子树的新渲染线程的开始。
+      // 我们仅在 hydration 期间将其用于 id 生成，这就是逻辑位于此特殊分支中的原因。
       const slotIndex = workInProgress.index;
       const numberOfForks = getForksAtLevel(workInProgress);
       pushTreeId(workInProgress, numberOfForks, slotIndex);
