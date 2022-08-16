@@ -286,11 +286,18 @@ export function reconcileChildren(
   nextChildren: any,
   renderLanes: Lanes,
 ) {
+  // 对于mount的组件，他会创建新的子Fiber节点
+  //
+  // 对于update的组件，他会将当前组件与该组件在上次更新时对应的Fiber节点比较（
+  // 也就是俗称的Diff算法），将比较的结果生成新Fiber节点
   if (current === null) {
+    // 对于mount的组件
     // If this is a fresh new component that hasn't been rendered yet, we
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
     // we can optimize this reconciliation pass by not tracking side-effects.
+    // 如果这是一个尚未渲染的全新组件，我们将不会通过应用最小的副作用来更新其子集。
+    // 相反，我们将在渲染之前将它们全部添加到孩子。这意味着我们可以通过不跟踪副作用来优化此对账过程。
     workInProgress.child = mountChildFibers(
       workInProgress,
       null,
@@ -304,6 +311,11 @@ export function reconcileChildren(
 
     // If we had any progressed work already, that is invalid at this point so
     // let's throw it out.
+    // 果当前子项与进行中的工作相同，
+    // 则意味着我们还没有开始对这些子项进行任何工作。
+    // 因此，我们使用克隆算法来创建所有当前孩子的副本。
+    // 如果我们已经有任何进展的工作，
+    // 那在这一点上是无效的，所以让我们把它扔掉
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       current.child,
@@ -311,6 +323,9 @@ export function reconcileChildren(
       renderLanes,
     );
   }
+  // reconcileChildFibers会为生成的Fiber节点带上effectTag属性，
+  // 而mountChildFibers不会。
+  // 要执行DOM操作的具体类型就保存在fiber.effectTag中。
 }
 
 function forceUnmountCurrentAndReconcile(
@@ -3428,10 +3443,13 @@ function checkScheduledUpdateOrContext(
   // updates or context.
   const updateLanes = current.lanes;
   if (includesSomeLane(updateLanes, renderLanes)) {
+    // 即当前Fiber节点优先级不够
     return true;
   }
   // No pending update, but because context is propagated lazily, we need
   // to check for a context change before we bail out.
+  // 没有挂起的更新，但是因为上下文是延迟传播的，所以我们需要在退出之前检查上下文的变化
+  // 异步更新的时候, 检查 对应的上下文内容
   if (enableLazyContextPropagation) {
     const dependencies = current.dependencies;
     if (dependencies !== null && checkIfContextChanged(dependencies)) {
@@ -3696,6 +3714,7 @@ function beginWork(
     } else {
       // Neither props nor legacy context changes. Check if there's a pending
       // update or context change.
+      // 检查是否有挂起的更新 或者上下文变动 检查计划更新
       const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(
         current,
         renderLanes,
@@ -3704,9 +3723,12 @@ function beginWork(
         !hasScheduledUpdateOrContext &&
         // If this is the second pass of an error or suspense boundary, there
         // may not be work scheduled on `current`, so we check for this flag.
+          // 如果这是错误或悬念边界的第二次通过，则可能没有在 `current` 上安排工作，因此我们检查此标志
+          // flags 是 lane 是对应计算优先级的
         (workInProgress.flags & DidCapture) === NoFlags
       ) {
         // No pending updates or context. Bail out now.
+        // 没有挂起的更新或上下文。现在保释。
         didReceiveUpdate = false;
         return attemptEarlyBailoutIfNoScheduledUpdate(
           current,
@@ -3716,6 +3738,7 @@ function beginWork(
       }
       if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
         // This is a special case that only exists for legacy mode.
+        // 这是一种仅适用于传统模式的特殊情况。
         // See https://github.com/facebook/react/pull/19216.
         didReceiveUpdate = true;
       } else {
@@ -3755,6 +3778,7 @@ function beginWork(
   // move this assignment out of the common path and into each branch.
   workInProgress.lanes = NoLanes;
 
+  // 最终会 添加 reconcileChildren 对象内容
   switch (workInProgress.tag) {
     case IndeterminateComponent: {
       return mountIndeterminateComponent(

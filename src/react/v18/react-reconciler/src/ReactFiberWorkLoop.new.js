@@ -1916,6 +1916,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   // 当某个Fiber节点执行完completeWork，如果其存在兄弟Fiber节点（即fiber.sibling !== null），会进入其兄弟Fiber的“递”阶段。
   if (next === null) {
     // If this doesn't spawn new work, complete the current work.
+    // 类似递归回去
     completeUnitOfWork(unitOfWork);
   } else {
     workInProgress = next;
@@ -1927,6 +1928,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
 function completeUnitOfWork(unitOfWork: Fiber): void {
   // Attempt to complete the current unit of work, then move to the next
   // sibling. If there are no more siblings, return to the parent fiber.
+  // 尝试完成当前的工作单元，然后移动到下一个兄弟。如果没有更多兄弟姐妹，则返回父节点
   let completedWork = unitOfWork;
   do {
     // The current, flushed, state of this fiber is the alternate. Ideally
@@ -1936,6 +1938,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     const returnFiber = completedWork.return;
 
     // Check if the work completed or if something threw.
+    // 检查工作是否完成或是否有东西扔了
     if ((completedWork.flags & Incomplete) === NoFlags) {
       setCurrentDebugFiberInDEV(completedWork);
       let next;

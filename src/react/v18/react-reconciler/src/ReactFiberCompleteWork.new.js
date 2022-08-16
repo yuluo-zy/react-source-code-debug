@@ -856,6 +856,8 @@ function completeWork(
   // to the current tree provider fiber is just as fast and less error-prone.
   // Ideally we would have a special version of the work loop only
   // for hydration.
+  // 注意：这故意不检查我们是否正在补水，因为与当前的树提供者相比，
+  // 纤维同样快且不易出错。理想情况下，我们会有一个特殊版本的工作循环，仅用于水合作用。
   popTreeContext(workInProgress);
   switch (workInProgress.tag) {
     case IndeterminateComponent:
@@ -957,6 +959,9 @@ function completeWork(
       return null;
     }
     case HostComponent: {
+      // 和beginWork一样，我们根据current === null ?判断是mount还是update。
+      // 同时针对HostComponent，
+      // 判断update时我们还需要考虑workInProgress.stateNode != null ?（即该Fiber节点是否存在对应的DOM节点）
       popHostContext(workInProgress);
       const rootContainerInstance = getRootHostContainer();
       const type = workInProgress.type;
@@ -1040,6 +1045,7 @@ function completeWork(
           markRef(workInProgress);
         }
       }
+      // 冒泡属性
       bubbleProperties(workInProgress);
       return null;
     }
