@@ -1053,7 +1053,7 @@ function completeWork(
       const newText = newProps;
       if (current && workInProgress.stateNode != null) {
         const oldText = current.memoizedProps;
-        // If we have an alternate, that means this is an update and we need
+        // If we have an alternate, that means t--0his is an update and we need
         // to schedule a side-effect to do the updates.
         updateHostText(current, workInProgress, oldText, newText);
       } else {

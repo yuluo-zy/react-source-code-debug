@@ -2031,10 +2031,21 @@ function commitRoot(
   recoverableErrors: null | Array<mixed>,
   transitions: Array<Transition> | null,
 ) {
+  // 在rootFiber.firstEffect上保存了一条需要执行副作用的Fiber节点的单向链表effectList，
+  // 这些Fiber节点的updateQueue中保存了变化的props。
+  // 这些副作用对应的DOM操作在commit阶段执行。
   // TODO: This no longer makes any sense. We already wrap the mutation and
   // layout phases. Should be able to remove.
   const previousUpdateLanePriority = getCurrentUpdatePriority();
   const prevTransition = ReactCurrentBatchConfig.transition;
+
+  // commit阶段的主要工作（即Renderer的工作流程）分为三部分：
+  //
+  // before mutation阶段（执行DOM操作前）
+  //
+  // mutation阶段（执行DOM操作）
+  //
+  // layout阶段（执行DOM操作后）
 
   try {
     ReactCurrentBatchConfig.transition = null;
@@ -2066,6 +2077,7 @@ function commitRootImpl(
     // no more pending effects.
     // TODO: Might be better if `flushPassiveEffects` did not automatically
     // flush synchronous work at the end, to avoid factoring hazards like this.
+    // 触发useEffect 回调和其他同步任务, 由于这些任务可能触发新的渲染, 所以一直要遍历到为空
     flushPassiveEffects();
   } while (rootWithPendingPassiveEffects !== null);
   flushRenderPhaseStrictModeWarningsInDEV();
@@ -2073,8 +2085,10 @@ function commitRootImpl(
   if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
     throw new Error('Should not already be working.');
   }
-
+  // root指 fiberRootNode
+  // root.finishedWork指当前应用的rootFiber
   const finishedWork = root.finishedWork;
+  // 凡是变量名带lane的都是优先级相关
   const lanes = root.finishedLanes;
 
   if (__DEV__) {
@@ -2121,14 +2135,17 @@ function commitRootImpl(
 
   // commitRoot never returns a continuation; it always finishes synchronously.
   // So we can clear these now to allow a new callback to be scheduled.
+  // 重置Scheduler绑定的回调函数
   root.callbackNode = null;
   root.callbackPriority = NoLane;
 
   // Update the first and last pending times on this root. The new first
   // pending time is whatever is left on the root fiber.
   let remainingLanes = mergeLanes(finishedWork.lanes, finishedWork.childLanes);
+  // 重置优先级变量
   markRootFinished(root, remainingLanes);
 
+  // 重置全局变量
   if (root === workInProgressRoot) {
     // We can reset these now that they are finished.
     workInProgressRoot = null;
@@ -2138,7 +2155,10 @@ function commitRootImpl(
     // This indicates that the last root we worked on is not the same one that
     // we're committing now. This most commonly happens when a suspended root
     // times out.
+    // 这表明我们处理的最后一个根与我们现在提交的根不同。
+    // 这最常发生在挂起的根超时时。
   }
+
 
   // If there are pending passive effects, schedule a callback to process them.
   // Do this as early as possible, so it is queued before anything else that
@@ -2174,6 +2194,11 @@ function commitRootImpl(
   // to check for the existence of `firstEffect` to satisfy Flow. I think the
   // only other reason this optimization exists is because it affects profiling.
   // Reconsider whether this is necessary.
+  // / 将effectList赋值给firstEffect
+  //   // 由于每个fiber的effectList只包含他的子孙节点
+  //   // 所以根节点如果有effectTag则不会被包含进来
+  //   // 所以这里将有effectTag的根节点插入到effectList尾部
+  //   // 这样才能保证有effect的fiber都在effectList中
   const subtreeHasEffects =
     (finishedWork.subtreeFlags &
       (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
@@ -2282,7 +2307,7 @@ function commitRootImpl(
   }
 
   const rootDidHavePassiveEffects = rootDoesHavePassiveEffects;
-
+  // useEffect相关
   if (rootDoesHavePassiveEffects) {
     // This commit has passive effects. Stash a reference to them. But don't
     // schedule a callback until after flushing layout work.
@@ -2312,6 +2337,8 @@ function commitRootImpl(
   // any work remaining at all (which would also include stuff like Suspense
   // retries or transitions). It's been like this for a while, though, so fixing
   // it probably isn't that urgent.
+  // 性能优化相关
+
   if (remainingLanes === NoLanes) {
     // If there's no remaining work, we can clear the set of already failed
     // error boundaries.
@@ -2338,6 +2365,7 @@ function commitRootImpl(
 
   // Always call this before exiting `commitRoot`, to ensure that any
   // additional work on this root is scheduled.
+  // 总是在退出 `commitRoot` 之前调用它，以确保在这个根上安排任何额外的工作。
   ensureRootIsScheduled(root, now());
 
   if (recoverableErrors !== null) {
@@ -2392,6 +2420,9 @@ function commitRootImpl(
   }
 
   // If layout work was scheduled, flush it now.
+  // 执行同步任务，这样同步任务不需要等到下次事件循环再执行
+// 比如在 componentDidMount 中执行 setState 创建的更新会在这里被同步执行
+// 或useLayoutEffect
   flushSyncCallbacks();
 
   if (__DEV__) {
